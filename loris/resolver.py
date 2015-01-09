@@ -342,6 +342,59 @@ class SourceImageCachingResolver(_AbstractResolver):
 
             return (local_fp, format)
 
+class BlueMountainResolver(_AbstractResolver):
+    '''Based on the SimpleFSResolver.
 
+    Blue Mountain identifiers have the form bmtnid_issuanceString_nnn.ext, where
+    - bmtnid is a string of the form bmtnNNN;
 
+    - issuanceString is of the form CCYY-MM?-DD?_II;
 
+    - nnn is a three-digit number indicating the location of the image file 
+      in the sequence of image files (not necessarily the number printed on the page;
+
+    - and ext is the file type (jp2 or tif).
+
+    The access store for images is rooted at /usr/share/BlueMountain/astore/periodicals.
+
+    See
+    https://github.com/pulibrary/BlueMountain/wiki/Reference#121-image-file-names
+    and
+    https://github.com/pulibrary/BlueMountain/wiki/Reference#14-arrangement-blue-mountain-directory-structure
+    for details.
+
+    For delivery, an identifier like bmtnaap_1921-11-15_01_001 should resolve to
+    /usr/share/BlueMountain/astore/periodicals/bmtnaap/issues/1921/11/15_01/delivery/bmtnaap_1921-11-15_01_001.jp2
+
+    '''
+    def __init__(self, config):
+        super(BlueMountainResolver, self).__init__(config)
+        self.cache_root = self.config['src_img_root']
+        self.default_format = 'jp2'
+
+    def _ident_to_path(self, ident):
+        bmtnid,date,issuance,imagenum = ident.split('_')
+        issuePath = '_'.join((date.replace('-','/'), issuance))
+        fp = join(self.cache_root, bmtnid, 'issues', issuePath, 'delivery', '.'.join((ident, self.default_format)))
+        return fp
+
+    def is_resolvable(self, ident):
+        ident = unquote(ident)
+        fp = BlueMountainResolver._ident_to_path(self, ident)
+        return exists(fp)
+
+    def resolve(self, ident):
+        ident = unquote(ident)
+        fp = BlueMountainResolver._ident_to_path(self, ident)
+        logger.debug('BlueMountainResolver src image: %s' % (fp,))
+
+        if not exists(fp):
+            public_message = 'BlueMountainResolver: Source image not found for identifier: %s.' % (ident,)
+            log_message = 'BlueMountainResolver: Source image not found at %s for identifier: %s.' % (fp,ident)
+            logger.warn(log_message)
+            raise ResolverException(404, public_message)
+
+        format = self.default_format
+        logger.debug('src format %s' % (format,))
+
+        return (fp, format)

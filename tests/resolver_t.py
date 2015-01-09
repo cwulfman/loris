@@ -2,6 +2,7 @@
 from loris.loris_exception import ResolverException
 from loris.resolver import SimpleHTTPResolver
 from loris.resolver import SourceImageCachingResolver
+from loris.resolver import BlueMountainResolver
 from os.path import dirname
 from os.path import isfile
 from os.path import join
@@ -30,6 +31,27 @@ class Test_SimpleFSResolver(loris_t.LorisTest):
 		self.assertEqual(expected_path, resolved_path)
 		self.assertEqual(fmt, 'jp2')
 		self.assertTrue(isfile(resolved_path))
+
+class Test_BlueMountainResolver(loris_t.LorisTest):
+        'Test that the BiueMountainResolver resolver works'
+
+        knownPaths = ( ('bmtnaap_1921-11_01_0001', '/usr/share/BlueMountain/astore/periodicals/bmtnaap/issues/1921/11_01/delivery/bmtnaap_1921-11_01_0001.jp2'),
+                       ('bmtnabi_1853-07-02_01_0008', '/usr/share/BlueMountain/astore/periodicals/bmtnabi/issues/1853/07/02_01/delivery/bmtnabi_1853-07-02_01_0008.jp2') )
+        
+        def test_blue_mountain_resolver(self):
+                # First we need to change the resolver on the test instance of the 
+                # application (overrides the config to use SimpleFSResolver)
+                config = {
+                        'source_root' : '/usr/share/BlueMountain/astore/periodicals',
+                        'cache_root' : self.app.img_cache.cache_root,
+                        'src_img_root' : '/usr/share/BlueMountain/astore/periodicals'
+                }
+                self.app.resolver = BlueMountainResolver(config)
+                
+                for ident,path in self.knownPaths:
+                        resolved_path,fmt = self.app.resolver.resolve(ident)
+                        self.assertEqual(path, resolved_path)
+                        self.assertTrue(isfile(resolved_path))
 
 class Test_SourceImageCachingResolver(loris_t.LorisTest):
 	'Test that the SourceImageCachingResolver resolver works'
@@ -231,8 +253,9 @@ class Test_SimpleHTTPResolver(loris_t.LorisTest):
 def suite():
 	import unittest
 	test_suites = []
-	test_suites.append(unittest.makeSuite(Test_SimpleFSResolver, 'test'))
-	test_suites.append(unittest.makeSuite(Test_SourceImageCachingResolver, 'test'))
-	test_suites.append(unittest.makeSuite(Test_SimpleHTTPResolver, 'test'))
+#	test_suites.append(unittest.makeSuite(Test_SimpleFSResolver, 'test'))
+	test_suites.append(unittest.makeSuite(Test_BlueMountainResolver, 'test'))
+#	test_suites.append(unittest.makeSuite(Test_SourceImageCachingResolver, 'test'))
+#	test_suites.append(unittest.makeSuite(Test_SimpleHTTPResolver, 'test'))
 	test_suite = unittest.TestSuite(test_suites)
 	return test_suite
